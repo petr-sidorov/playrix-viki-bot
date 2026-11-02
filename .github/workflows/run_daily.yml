@@ -2,6 +2,12 @@ name: Daily Bot
 
 on:
   workflow_dispatch:
+    inputs:
+      check_only:
+        description: Install dependencies and verify imports without running the bot
+        required: true
+        type: boolean
+        default: false
   schedule:
       - cron: "0 19 * * *"
 
@@ -15,7 +21,27 @@ jobs:
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
+            - name: Set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.13"
             - name: Install Dependencies
               run: pip install -r requirements.txt
+            - name: Verify App Import and Configuration
+              if: ${{ inputs.check_only }}
+              run: |
+                  python - <<'PY'
+                  import os
+                  import app
+
+                  missing = [
+                      name for name in ("TELEGRAM_TOKEN", "TELEGRAM_CHANEL_ID")
+                      if not os.environ.get(name)
+                  ]
+                  if missing:
+                      raise SystemExit("Missing required configuration: " + ", ".join(missing))
+                  print("App imports successfully; required configuration is present.")
+                  PY
             - name: Run App
+              if: ${{ !inputs.check_only }}
               run: python app.py
