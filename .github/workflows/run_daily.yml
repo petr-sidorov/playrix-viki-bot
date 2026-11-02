@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       check_only:
-        description: Install dependencies and verify imports without running the bot
+        description: Install dependencies and smoke-test app with mocked Wikipedia responses
         required: true
         type: boolean
         default: false
@@ -27,7 +27,7 @@ jobs:
                   python-version: "3.13"
             - name: Install Dependencies
               run: pip install -r requirements.txt
-            - name: Verify App Import and Configuration
+            - name: Safely Smoke Test App Startup and Configuration
               if: ${{ inputs.check_only }}
               run: |
                   python - <<'PY'
