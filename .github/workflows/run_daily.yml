@@ -32,6 +32,9 @@ jobs:
               run: |
                   python - <<'PY'
                   import os
+                  import requests
+                  import runpy
+                  import time
                   import app
 
                   missing = [
@@ -40,7 +43,40 @@ jobs:
                   ]
                   if missing:
                       raise SystemExit("Missing required configuration: " + ", ".join(missing))
-                  print("App imports successfully; required configuration is present.")
+
+                  page_ids = (
+                      "8049948", "62661703", "4261400", "2326524", "3411941", "8049954",
+                      "70596728", "4261416", "2326829", "1753369", "3827363", "2828726",
+                      "2828727", "2377222", "10941028", "52668348", "9036946", "19357370",
+                  )
+
+                  class WikipediaResponse:
+                      status_code = 200
+
+                      def raise_for_status(self):
+                          pass
+
+                      def json(self):
+                          return {
+                              "query": {
+                                  "pages": {
+                                      page_id: {
+                                          "revisions": [{"timestamp": "2000-01-01T00:00:00Z"}]
+                                      }
+                                      for page_id in page_ids
+                                  }
+                              }
+                          }
+
+                  def mocked_get(url, *args, **kwargs):
+                      if not url.startswith("https://") or not url.endswith(".wikipedia.org/w/api.php"):
+                          raise AssertionError("Blocked non-Wikipedia network call during smoke check")
+                      return WikipediaResponse()
+
+                  requests.get = mocked_get
+                  time.sleep = lambda _: None
+                  runpy.run_path("app.py", run_name="__main__")
+                  print("App main completed with mocked Wikipedia responses and no external side effects.")
                   PY
             - name: Run App
               if: ${{ !inputs.check_only }}
